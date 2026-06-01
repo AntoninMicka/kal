@@ -75,59 +75,74 @@ def main():
 
     if VELIKOST == "A3":
         SVG_W, SVG_H = "297mm", "420mm"
+        VW, VH = 297, 420
     else:
         SVG_W, SVG_H = "210mm", "297mm"
+        VW, VH = 210, 297
+
+    # Dynamické výpočty rozměrů (pro zachování absolutní velikosti kalendária a zvětšení fotky na A3)
+    PIC_W, PIC_H = VW - 50, VH - 137
+    POLY_Y1, POLY_Y2 = VH - 112, VH - 77
+    POLY_X1, POLY_X2 = VW - 130, VW - 165
+    TEXT_ODEBRAT_X, TEXT_ODEBRAT_Y = VW - 65, VH - 52
+    TEXT_MESIC_X, TEXT_MESIC_Y = 22.5, VH - 87
+    TEXT_ECO_X, TEXT_ECO_Y = 25, VH - 104
+    CAL_X, CAL_Y = VW - 115, VH - 99
+    STRED_X = VW / 2
+    TEXT_TITULEK_Y, TEXT_ROK_Y = VH - 87, VH - 62
+    MINI_OFFSET_X, MINI_OFFSET_Y = (VW - 210) / 2, (VH - 297) / 2
+    TEXT_PREHLED_Y = 20 + MINI_OFFSET_Y
 
     MESICE = ["LEDEN", "ÚNOR", "BŘEZEN", "DUBEN", "KVĚTEN", "ČERVEN",
               "ČERVENEC", "SRPEN", "ZÁŘÍ", "ŘÍJEN", "LISTOPAD", "PROSINEC"]
 
     # Úprava horní šablony: přidán <pattern> pro šrafování, fill=none pro průhlednost a sekce ODEBRAT
-    SABLONA_HORNI = """<?xml version="1.0" encoding="UTF-8"?>
-<svg width="{w}" height="{h}" viewBox="0 0 210 297" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    SABLONA_HORNI = f"""<?xml version="1.0" encoding="UTF-8"?>
+<svg width="{{w}}" height="{{h}}" viewBox="0 0 {VW} {VH}" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
     <defs>
         <pattern id="srafovani" patternUnits="userSpaceOnUse" width="6" height="6">
             <path d="M-1,1 l2,-2 M0,6 l6,-6 M5,7 l2,-2" stroke="#ffcccc" stroke-width="1.5"/>
         </pattern>
     </defs>
-    <polygon points="0,0 210,0 210,185 80,185 45,220 0,220" fill="none" stroke="#c0c0c0" stroke-width="0.3"/>
+    <polygon points="0,0 {VW},0 {VW},{POLY_Y1} {POLY_X1},{POLY_Y1} {POLY_X2},{POLY_Y2} 0,{POLY_Y2}" fill="none" stroke="#c0c0c0" stroke-width="0.3"/>
 
-    <polygon points="0,220 45,220 80,185 210,185 210,297 0,297" fill="url(#srafovani)" />
-    <text x="145" y="245" text-anchor="middle" font-size="14" font-family="sans-serif" font-weight="bold" fill="#ff0000" letter-spacing="3">ODEBRAT</text>
+    <polygon points="0,{POLY_Y2} {POLY_X2},{POLY_Y2} {POLY_X1},{POLY_Y1} {VW},{POLY_Y1} {VW},{VH} 0,{VH}" fill="url(#srafovani)" />
+    <text x="{TEXT_ODEBRAT_X}" y="{TEXT_ODEBRAT_Y}" text-anchor="middle" font-size="14" font-family="sans-serif" font-weight="bold" fill="#ff0000" letter-spacing="3">ODEBRAT</text>
 
-    {obrazek_svg}
-    <text x="22.5" y="210" text-anchor="middle" font-size="8" font-family="sans-serif" font-weight="bold" fill="#303030">{nazev_mesice}</text>
-    <line x1="45" y1="220" x2="80" y2="185" stroke="#ff0000" stroke-width="0.3" stroke-dasharray="2,2"/>
+    {{obrazek_svg}}
+    <text x="{TEXT_MESIC_X}" y="{TEXT_MESIC_Y}" text-anchor="middle" font-size="8" font-family="sans-serif" font-weight="bold" fill="#303030">{{nazev_mesice}}</text>
+    <line x1="{POLY_X2}" y1="{POLY_Y2}" x2="{POLY_X1}" y2="{POLY_Y1}" stroke="#ff0000" stroke-width="0.3" stroke-dasharray="2,2"/>
 </svg>"""
 
-    SABLONA_SPODNI = """<?xml version="1.0" encoding="UTF-8"?>
-<svg width="{w}" height="{h}" viewBox="0 0 210 297" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
-    <rect x="0" y="0" width="210" height="297" fill="#303030"/>
-    {obrazek_svg}
-{kalendarium}
+    SABLONA_SPODNI = f"""<?xml version="1.0" encoding="UTF-8"?>
+<svg width="{{w}}" height="{{h}}" viewBox="0 0 {VW} {VH}" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <rect x="0" y="0" width="{VW}" height="{VH}" fill="#303030"/>
+    {{obrazek_svg}}
+{{kalendarium}}
 </svg>"""
 
     # Nová šablona pro variantu economy (1 list na měsíc, bez odřezávání, černý podklad)
-    SABLONA_ECONOMY = """<?xml version="1.0" encoding="UTF-8"?>
-<svg width="{w}" height="{h}" viewBox="0 0 210 297" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
-    <rect x="0" y="0" width="210" height="297" fill="#303030"/>
-    {obrazek_svg}
-    <text x="25" y="193" text-anchor="start" font-size="10" font-family="sans-serif" font-weight="bold" fill="#ffffff" letter-spacing="1">{nazev_mesice}</text>
-{kalendarium}
+    SABLONA_ECONOMY = f"""<?xml version="1.0" encoding="UTF-8"?>
+<svg width="{{w}}" height="{{h}}" viewBox="0 0 {VW} {VH}" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <rect x="0" y="0" width="{VW}" height="{VH}" fill="#303030"/>
+    {{obrazek_svg}}
+    <text x="{TEXT_ECO_X}" y="{TEXT_ECO_Y}" text-anchor="start" font-size="10" font-family="sans-serif" font-weight="bold" fill="#ffffff" letter-spacing="1">{{nazev_mesice}}</text>
+{{kalendarium}}
 </svg>"""
 
-    SABLONA_TITULKA = """<?xml version="1.0" encoding="UTF-8"?>
-<svg width="{w}" height="{h}" viewBox="0 0 210 297" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
-    <rect x="0" y="0" width="210" height="297" fill="#f4f4f4"/>
-    {obrazek_svg}
-    <text x="105" y="210" text-anchor="middle" font-size="12" font-family="sans-serif" font-weight="normal" fill="#505050">{titulek}</text>
-    <text x="105" y="235" text-anchor="middle" font-size="28" font-family="sans-serif" font-weight="bold" fill="#303030">{rok}</text>
+    SABLONA_TITULKA = f"""<?xml version="1.0" encoding="UTF-8"?>
+<svg width="{{w}}" height="{{h}}" viewBox="0 0 {VW} {VH}" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <rect x="0" y="0" width="{VW}" height="{VH}" fill="#f4f4f4"/>
+    {{obrazek_svg}}
+    <text x="{STRED_X}" y="{TEXT_TITULEK_Y}" text-anchor="middle" font-size="12" font-family="sans-serif" font-weight="normal" fill="#505050">{{titulek}}</text>
+    <text x="{STRED_X}" y="{TEXT_ROK_Y}" text-anchor="middle" font-size="28" font-family="sans-serif" font-weight="bold" fill="#303030">{{rok}}</text>
 </svg>"""
 
-    SABLONA_SOUHRN = """<?xml version="1.0" encoding="UTF-8"?>
-<svg width="{w}" height="{h}" viewBox="0 0 210 297" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
-    <rect x="0" y="0" width="210" height="297" fill="#f4f4f4"/>
-    <text x="105" y="20" text-anchor="middle" font-size="10" font-family="sans-serif" font-weight="bold" fill="#303030">PŘEHLED ROKU {rok}</text>
-{miniatury_svg}
+    SABLONA_SOUHRN = f"""<?xml version="1.0" encoding="UTF-8"?>
+<svg width="{{w}}" height="{{h}}" viewBox="0 0 {VW} {VH}" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <rect x="0" y="0" width="{VW}" height="{VH}" fill="#f4f4f4"/>
+    <text x="{STRED_X}" y="{TEXT_PREHLED_Y}" text-anchor="middle" font-size="10" font-family="sans-serif" font-weight="bold" fill="#303030">PŘEHLED ROKU {{rok}}</text>
+{{miniatury_svg}}
 </svg>"""
 
     def najdi_obrazek(prefix, x, y, cw, ch):
@@ -151,25 +166,25 @@ def main():
 
     print(f"Generuji kalendář pro rok {ROK} (Varianta: {VARIANTA.upper()})...")
 
-    obrazek_titulka = najdi_obrazek("00", 25, 25, 160, 160)
+    obrazek_titulka = najdi_obrazek("00", 25, 25, PIC_W, PIC_H)
     vygeneruj_stranku(f"{ROK}_00", SABLONA_TITULKA.format(w=SVG_W, h=SVG_H, titulek=TITULEK, rok=ROK, obrazek_svg=obrazek_titulka))
 
     miniatury_radky = []
 
     for mesic_idx, nazev_mesice in enumerate(MESICE, start=1):
         # Obrázek A (hlavní vizuál) vždy potřebujeme
-        obrazek_A = najdi_obrazek(f"{mesic_idx:02d}A", 25, 25, 160, 160)
+        obrazek_A = najdi_obrazek(f"{mesic_idx:02d}A", 25, 25, PIC_W, PIC_H)
 
         # Do miniatur použijeme vždy základní vizuál
-        mini_x = 20 + ((mesic_idx - 1) % 3) * 60
-        mini_y = 35 + ((mesic_idx - 1) // 3) * 60
+        mini_x = MINI_OFFSET_X + 20 + ((mesic_idx - 1) % 3) * 60
+        mini_y = MINI_OFFSET_Y + 35 + ((mesic_idx - 1) // 3) * 60
         miniatury_radky.append(f'    {najdi_obrazek(f"{mesic_idx:02d}A", mini_x, mini_y, 50, 50)}')
         miniatury_radky.append(f'    <text x="{mini_x + 25}" y="{mini_y + 55}" text-anchor="middle" font-size="5" font-family="sans-serif" fill="#303030">{nazev_mesice}</text>')
 
         dny_v_mesici = calendar.monthcalendar(ROK, mesic_idx)
         kalendarium_radky = []
 
-        x_start, y_start = 95, 198
+        x_start, y_start = CAL_X, CAL_Y
         col_w, row_h = 17, 14
         dny_v_tydnu = ["Po", "Út", "St", "Čt", "Pá", "So", "Ne"]
 
@@ -206,7 +221,7 @@ def main():
         # -----------------------------------------------
         if VARIANTA == "full":
             # Potřebujeme i B obrázek pro druhou vrstvu
-            obrazek_B = najdi_obrazek(f"{mesic_idx:02d}B", 25, 25, 160, 160)
+            obrazek_B = najdi_obrazek(f"{mesic_idx:02d}B", 25, 25, PIC_W, PIC_H)
             vygeneruj_stranku(f"{ROK}_{mesic_idx:02d}A", SABLONA_HORNI.format(w=SVG_W, h=SVG_H, nazev_mesice=nazev_mesice, obrazek_svg=obrazek_A))
             vygeneruj_stranku(f"{ROK}_{mesic_idx:02d}B", SABLONA_SPODNI.format(w=SVG_W, h=SVG_H, kalendarium=kalendarium_formatovane, obrazek_svg=obrazek_B))
         else:
