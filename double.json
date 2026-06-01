@@ -152,7 +152,7 @@
         0
       ],
       "vae": [
-        "12",
+        "100",
         2
       ],
       "mask": [
@@ -169,7 +169,7 @@
     "inputs": {
       "text": "__EDITACNI_PROMPT__",
       "clip": [
-        "12",
+        "100",
         1
       ]
     },
@@ -185,9 +185,9 @@
       "cfg": 8,
       "sampler_name": "euler",
       "scheduler": "simple",
-      "denoise": 0.75,
+      "denoise": 0.95,
       "model": [
-        "12",
+        "100",
         0
       ],
       "positive": [
@@ -195,7 +195,7 @@
         0
       ],
       "negative": [
-        "6",
+        "101",
         0
       ],
       "latent_image": [
@@ -215,7 +215,7 @@
         0
       ],
       "vae": [
-        "12",
+        "100",
         2
       ]
     },
@@ -522,6 +522,28 @@
     "class_type": "FaceDetailer",
     "_meta": {
       "title": "Hand Detailer (Edited)"
+    }
+  },
+  "100": {
+    "inputs": {
+      "ckpt_name": "sdxl_inpainting.safetensors"
+    },
+    "class_type": "CheckpointLoaderSimple",
+    "_meta": {
+      "title": "Load Edit Checkpoint"
+    }
+  },
+  "101": {
+    "inputs": {
+      "text": "__NEGATIVNI_PROMPT__",
+      "clip": [
+        "100",
+        1
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (Edit Negative)"
     }
   }
 }
