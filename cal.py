@@ -93,6 +93,14 @@ def main():
     MINI_OFFSET_X, MINI_OFFSET_Y = (VW - 210) / 2, (VH - 297) / 2
     TEXT_PREHLED_Y = 20 + MINI_OFFSET_Y
 
+    # Ořezové značky (3 mm od okrajů, délka čáry 8 mm)
+    OREZOVE_ZNACKY = f"""    <g stroke="#999999" stroke-width="0.3" fill="none">
+        <path d="M0,3 L8,3 M3,0 L3,8" />
+        <path d="M{VW},3 L{VW-8},3 M{VW-3},0 L{VW-3},8" />
+        <path d="M0,{VH-3} L8,{VH-3} M3,{VH} L3,{VH-8}" />
+        <path d="M{VW},{VH-3} L{VW-8},{VH-3} M{VW-3},{VH} L{VW-3},{VH-8}" />
+    </g>"""
+
     MESICE = ["LEDEN", "ÚNOR", "BŘEZEN", "DUBEN", "KVĚTEN", "ČERVEN",
               "ČERVENEC", "SRPEN", "ZÁŘÍ", "ŘÍJEN", "LISTOPAD", "PROSINEC"]
 
@@ -112,6 +120,7 @@ def main():
     {{obrazek_svg}}
     <text x="{TEXT_MESIC_X}" y="{TEXT_MESIC_Y}" text-anchor="middle" font-size="8" font-family="sans-serif" font-weight="bold" fill="#303030">{{nazev_mesice}}</text>
     <line x1="{POLY_X2}" y1="{POLY_Y2}" x2="{POLY_X1}" y2="{POLY_Y1}" stroke="#ff0000" stroke-width="0.3" stroke-dasharray="2,2"/>
+{OREZOVE_ZNACKY}
 </svg>"""
 
     SABLONA_SPODNI = f"""<?xml version="1.0" encoding="UTF-8"?>
@@ -119,6 +128,7 @@ def main():
     <rect x="0" y="0" width="{VW}" height="{VH}" fill="#303030"/>
     {{obrazek_svg}}
 {{kalendarium}}
+{OREZOVE_ZNACKY}
 </svg>"""
 
     # Nová šablona pro variantu economy (1 list na měsíc, bez odřezávání, černý podklad)
@@ -128,6 +138,7 @@ def main():
     {{obrazek_svg}}
     <text x="{TEXT_ECO_X}" y="{TEXT_ECO_Y}" text-anchor="start" font-size="10" font-family="sans-serif" font-weight="bold" fill="#ffffff" letter-spacing="1">{{nazev_mesice}}</text>
 {{kalendarium}}
+{OREZOVE_ZNACKY}
 </svg>"""
 
     SABLONA_TITULKA = f"""<?xml version="1.0" encoding="UTF-8"?>
@@ -136,6 +147,7 @@ def main():
     {{obrazek_svg}}
     <text x="{STRED_X}" y="{TEXT_TITULEK_Y}" text-anchor="middle" font-size="12" font-family="sans-serif" font-weight="normal" fill="#505050">{{titulek}}</text>
     <text x="{STRED_X}" y="{TEXT_ROK_Y}" text-anchor="middle" font-size="28" font-family="sans-serif" font-weight="bold" fill="#303030">{{rok}}</text>
+{OREZOVE_ZNACKY}
 </svg>"""
 
     SABLONA_SOUHRN = f"""<?xml version="1.0" encoding="UTF-8"?>
@@ -143,6 +155,7 @@ def main():
     <rect x="0" y="0" width="{VW}" height="{VH}" fill="#f4f4f4"/>
     <text x="{STRED_X}" y="{TEXT_PREHLED_Y}" text-anchor="middle" font-size="10" font-family="sans-serif" font-weight="bold" fill="#303030">PŘEHLED ROKU {{rok}}</text>
 {{miniatury_svg}}
+{OREZOVE_ZNACKY}
 </svg>"""
 
     def najdi_obrazek(prefix, x, y, cw, ch):
