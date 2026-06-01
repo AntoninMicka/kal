@@ -1,5 +1,7 @@
 import json
 import os
+import sys
+import argparse
 import urllib.request
 import time
 import urllib.parse
@@ -85,12 +87,19 @@ def zeptej_se_na_prepsani(nazev, generovat_vse):
     if generovat_vse:
         return True, True
     while True:
-        odpoved = input(f"  Obrázky pro '{nazev}' již existují. Přepsat? [A]no / [N]e / [V]še: ").strip().lower()
+        odpoved = input(f"  Obrázky pro '{nazev}' již existují. Přepsat? [A]no / [N]e / [V]še / [U]končit: ").strip().lower()
         if odpoved in ('a', 'ano'): return True, False
         if odpoved in ('n', 'ne'): return False, False
         if odpoved in ('v', 'vše', 'vse'): return True, True
+        if odpoved in ('u', 'ukoncit', 'ukončit', 'k', 'konec'):
+            print("  Ukončuji skript...")
+            sys.exit(0)
 
 def main():
+    parser = argparse.ArgumentParser(description="Generátor obrázků pro kalendář v ComfyUI.")
+    parser.add_argument("-m", "--mesic", type=int, choices=range(0, 13), help="Číslo měsíce ke generování (0 = titulka, 1-12 = měsíce). Pokud není zadáno, generuje se vše.", default=None)
+    args = parser.parse_args()
+
     print("Načítám soubory...")
     # 1. Načtení šablony jako čistého textu pro snadné nahrazování
     try:
@@ -115,7 +124,7 @@ def main():
 
     # --- ZPRACOVÁNÍ TITULKY ---
     titulka = stranky.get("00_titulka")
-    if titulka:
+    if titulka and (args.mesic is None or args.mesic == 0):
         print("\nZpracovávám: 00_titulka (Titulní strana)")
 
         prepsat = True
@@ -149,6 +158,10 @@ def main():
     # --- ZPRACOVÁNÍ MĚSÍCŮ ---
     mesice = stranky.get("mesice", {})
     for mesic_id, data_mesice in mesice.items():
+        # Pokud byl zadán parametr, přeskočíme měsíce, které neodpovídají volbě
+        if args.mesic is not None and args.mesic != int(mesic_id):
+            continue
+
         poznamka = data_mesice.get('poznamka', '')
         print(f"\nZpracovávám měsíc: {mesic_id} ({poznamka})")
 

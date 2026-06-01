@@ -65,6 +65,7 @@ def main():
     parser.add_argument("-t", "--titulek", type=str, help="Vlastní titulek na úvodní stránku", default=None)
     parser.add_argument("-v", "--velikost", choices=["A4", "A3"], default="A4", help="Velikost výstupního PDF (A4 nebo A3)")
     parser.add_argument("--varianta", choices=["full", "economy"], default="full", help="Varianta zpracování kalendáře (full s průsvitkou, nebo economy 1 str./měsíc)")
+    parser.add_argument("--bez-okraju", action="store_true", help="Vložit obrázky bez okrajů (vyplní celou plochu na spadávku)")
     args = parser.parse_args()
 
     ROK = args.rok
@@ -80,8 +81,14 @@ def main():
         SVG_W, SVG_H = "210mm", "297mm"
         VW, VH = 210, 297
 
-    # Dynamické výpočty rozměrů (pro zachování absolutní velikosti kalendária a zvětšení fotky na A3)
-    PIC_W, PIC_H = VW - 50, VH - 137
+    # Dynamické výpočty rozměrů
+    if args.bez_okraju:
+        IMG_X, IMG_Y = 0, 0
+        PIC_W, PIC_H = VW, VH
+    else:
+        IMG_X, IMG_Y = 25, 25
+        PIC_W, PIC_H = VW - 50, VH - 137
+
     POLY_Y1, POLY_Y2 = VH - 112, VH - 77
     POLY_X1, POLY_X2 = VW - 130, VW - 165
     TEXT_ODEBRAT_X, TEXT_ODEBRAT_Y = VW - 65, VH - 52
@@ -166,7 +173,8 @@ def main():
                 with open(soubor, "rb") as img_file:
                     b64_data = base64.b64encode(img_file.read()).decode('utf-8')
                 data_uri = f"data:{mime_typ};base64,{b64_data}"
-                return f'<image x="{x}" y="{y}" width="{cw}" height="{ch}" href="{data_uri}" xlink:href="{data_uri}" preserveAspectRatio="xMidYMid meet" />'
+                aspect = "xMidYMid slice" if args.bez_okraju else "xMidYMid meet"
+                return f'<image x="{x}" y="{y}" width="{cw}" height="{ch}" href="{data_uri}" xlink:href="{data_uri}" preserveAspectRatio="{aspect}" />'
 
         return f'''<rect x="{x}" y="{y}" width="{cw}" height="{ch}" fill="none" stroke="#808080" stroke-width="0.5" stroke-dasharray="2,2"/>
     <text x="{x + cw/2}" y="{y + ch/2}" text-anchor="middle" font-size="4" fill="#808080">{prefix}</text>'''
@@ -179,14 +187,14 @@ def main():
 
     print(f"Generuji kalendář pro rok {ROK} (Varianta: {VARIANTA.upper()})...")
 
-    obrazek_titulka = najdi_obrazek("00", 25, 25, PIC_W, PIC_H)
+    obrazek_titulka = najdi_obrazek("00", IMG_X, IMG_Y, PIC_W, PIC_H)
     vygeneruj_stranku(f"{ROK}_00", SABLONA_TITULKA.format(w=SVG_W, h=SVG_H, titulek=TITULEK, rok=ROK, obrazek_svg=obrazek_titulka))
 
     miniatury_radky = []
 
     for mesic_idx, nazev_mesice in enumerate(MESICE, start=1):
         # Obrázek A (hlavní vizuál) vždy potřebujeme
-        obrazek_A = najdi_obrazek(f"{mesic_idx:02d}A", 25, 25, PIC_W, PIC_H)
+        obrazek_A = najdi_obrazek(f"{mesic_idx:02d}A", IMG_X, IMG_Y, PIC_W, PIC_H)
 
         # Do miniatur použijeme vždy základní vizuál
         mini_x = MINI_OFFSET_X + 20 + ((mesic_idx - 1) % 3) * 60
@@ -234,7 +242,7 @@ def main():
         # -----------------------------------------------
         if VARIANTA == "full":
             # Potřebujeme i B obrázek pro druhou vrstvu
-            obrazek_B = najdi_obrazek(f"{mesic_idx:02d}B", 25, 25, PIC_W, PIC_H)
+            obrazek_B = najdi_obrazek(f"{mesic_idx:02d}B", IMG_X, IMG_Y, PIC_W, PIC_H)
             vygeneruj_stranku(f"{ROK}_{mesic_idx:02d}A", SABLONA_HORNI.format(w=SVG_W, h=SVG_H, nazev_mesice=nazev_mesice, obrazek_svg=obrazek_A))
             vygeneruj_stranku(f"{ROK}_{mesic_idx:02d}B", SABLONA_SPODNI.format(w=SVG_W, h=SVG_H, kalendarium=kalendarium_formatovane, obrazek_svg=obrazek_B))
         else:
