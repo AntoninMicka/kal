@@ -3,6 +3,7 @@ import os
 import sys
 import argparse
 import urllib.request
+import urllib.error
 import time
 import urllib.parse
 
@@ -19,6 +20,11 @@ def odesli_do_comfy(prompt_data):
         with urllib.request.urlopen(req) as response:
             odpoved = json.loads(response.read())
             return odpoved['prompt_id']
+    except urllib.error.HTTPError as e:
+        err_msg = e.read().decode('utf-8')
+        print(f"\nChyba API ComfyUI ({e.code}): {err_msg}")
+        print("  -> Ujistěte se, že 'double.json' je uložen v 'API formátu' (Save API Format).")
+        return None
     except Exception as e:
         print(f"Chyba připojení ke ComfyUI: {e}")
         print("Ujistěte se, že ComfyUI běží a API je dostupné.")
@@ -95,6 +101,11 @@ def zeptej_se_na_prepsani(nazev, generovat_vse):
             print("  Ukončuji skript...")
             sys.exit(0)
 
+def bezpecne_nahradit(text, klic, hodnota):
+    """Bezpečně nahradí klíč v JSON textu, aby případné uvozovky nerozbily strukturu."""
+    escapovana = json.dumps(hodnota)[1:-1]
+    return text.replace(klic, escapovana)
+
 def main():
     parser = argparse.ArgumentParser(description="Generátor obrázků pro kalendář v ComfyUI.")
     parser.add_argument("-m", "--mesic", type=int, choices=range(0, 13), help="Číslo měsíce ke generování (0 = titulka, 1-12 = měsíce). Pokud není zadáno, generuje se vše.", default=None)
@@ -138,12 +149,12 @@ def main():
             negativni = titulka.get("negativni", "").format(**globalni)
 
             aktualni_sablona = sablona_text
-            aktualni_sablona = aktualni_sablona.replace("__HLAVNI_PROMPT__", prompt_titulka)
-            aktualni_sablona = aktualni_sablona.replace("__NEGATIVNI_PROMPT__", negativni)
+            aktualni_sablona = bezpecne_nahradit(aktualni_sablona, "__HLAVNI_PROMPT__", prompt_titulka)
+            aktualni_sablona = bezpecne_nahradit(aktualni_sablona, "__NEGATIVNI_PROMPT__", negativni)
 
             # Šablona vyžaduje inpainting, pro titulku pošleme slepá data
-            aktualni_sablona = aktualni_sablona.replace("__EDITACNI_PROMPT__", "empty background")
-            aktualni_sablona = aktualni_sablona.replace("__TEXT_MASKY__", "none")
+            aktualni_sablona = bezpecne_nahradit(aktualni_sablona, "__EDITACNI_PROMPT__", "empty background")
+            aktualni_sablona = bezpecne_nahradit(aktualni_sablona, "__TEXT_MASKY__", "none")
 
             # Uložíme základ jako titulku, inpaintingový výsledek označíme jako odpad
             aktualni_sablona = aktualni_sablona.replace('"base_"', '"00_titulka_"')
@@ -194,10 +205,10 @@ def main():
             editacni_prompt = prompt_A
 
         aktualni_sablona = sablona_text
-        aktualni_sablona = aktualni_sablona.replace("__HLAVNI_PROMPT__", hlavni_prompt)
-        aktualni_sablona = aktualni_sablona.replace("__EDITACNI_PROMPT__", editacni_prompt)
-        aktualni_sablona = aktualni_sablona.replace("__TEXT_MASKY__", text_masky)
-        aktualni_sablona = aktualni_sablona.replace("__NEGATIVNI_PROMPT__", negativni)
+        aktualni_sablona = bezpecne_nahradit(aktualni_sablona, "__HLAVNI_PROMPT__", hlavni_prompt)
+        aktualni_sablona = bezpecne_nahradit(aktualni_sablona, "__EDITACNI_PROMPT__", editacni_prompt)
+        aktualni_sablona = bezpecne_nahradit(aktualni_sablona, "__TEXT_MASKY__", text_masky)
+        aktualni_sablona = bezpecne_nahradit(aktualni_sablona, "__NEGATIVNI_PROMPT__", negativni)
 
         aktualni_sablona = aktualni_sablona.replace('"base_"', f'"{prefix_zaklad}_"')
         aktualni_sablona = aktualni_sablona.replace('"edited_"', f'"{prefix_edit}_"')
