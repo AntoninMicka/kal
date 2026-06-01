@@ -1,0 +1,163 @@
+import json
+import urllib.request
+import time
+import urllib.parse
+
+# --- KONFIGURACE ---
+COMFY_URL = "http://127.0.0.1:8188"
+SABLONA_SOUBOR = "double.json"
+PROJEKT_SOUBOR = "projekt.json"
+
+def odesli_do_comfy(prompt_data):
+    """Odešle JSON graf do API ComfyUI a vrátí ID úlohy."""
+    data = json.dumps({"prompt": prompt_data}).encode('utf-8')
+    req = urllib.request.Request(f"{COMFY_URL}/prompt", data=data)
+    try:
+        with urllib.request.urlopen(req) as response:
+            odpoved = json.loads(response.read())
+            return odpoved['prompt_id']
+    except Exception as e:
+        print(f"Chyba připojení ke ComfyUI: {e}")
+        print("Ujistěte se, že ComfyUI běží a API je dostupné.")
+        return None
+
+def cekej_na_dokonceni(prompt_id):
+    """Pravidelně se dotazuje ComfyUI, zda už je obrázek vygenerovaný."""
+    print("  Generuji obrázky v ComfyUI...", end="", flush=True)
+    while True:
+        req = urllib.request.Request(f"{COMFY_URL}/history/{prompt_id}")
+        try:
+            with urllib.request.urlopen(req) as response:
+                historie = json.loads(response.read())
+                if prompt_id in historie:
+                    print(" Hotovo!")
+                    return
+        except Exception as e:
+            print(f"\n  Chyba při dotazování na historii: {e}")
+            return
+
+        print(".", end="", flush=True)
+        time.sleep(2)
+
+def stahni_obrazky(prompt_id):
+    """Zjistí z historie názvy souborů a stáhne je do aktuálního adresáře."""
+    req = urllib.request.Request(f"{COMFY_URL}/history/{prompt_id}")
+    try:
+        with urllib.request.urlopen(req) as response:
+            historie = json.loads(response.read())
+
+            # ComfyUI vrací historii pod klíčem daného prompt_id
+            if prompt_id in historie:
+                vystupy = historie[prompt_id].get("outputs", {})
+
+                # Projdeme všechny uzly (Save Image), které něco vygenerovaly
+                for node_id, data_uzlu in vystupy.items():
+                    if "images" in data_uzlu:
+                        for obrazek in data_uzlu["images"]:
+                            nazev = obrazek["filename"]
+                            slozka = obrazek["subfolder"]
+                            typ = obrazek["type"]
+
+                            # Sestavení URL pro stažení přes API
+                            params = urllib.parse.urlencode({"filename": nazev, "subfolder": slozka, "type": typ})
+                            download_url = f"{COMFY_URL}/view?{params}"
+
+                            print(f"    Stahuji: {nazev} ... ", end="", flush=True)
+
+                            # Stažení a uložení jako binární soubor do aktuální složky
+                            with urllib.request.urlopen(download_url) as img_res:
+                                with open(nazev, "wb") as f:
+                                    f.write(img_res.read())
+                            print("OK")
+    except Exception as e:
+        print(f"\n  Chyba při stahování obrázků z API: {e}")
+
+def main():
+    print("Načítám soubory...")
+    # 1. Načtení šablony jako čistého textu pro snadné nahrazování
+    try:
+        with open(SABLONA_SOUBOR, "r", encoding="utf-8") as f:
+            sablona_text = f.read()
+    except FileNotFoundError:
+        print(f"Chyba: Soubor {SABLONA_SOUBOR} nebyl nalezen.")
+        return
+
+    # 2. Načtení nastavení projektu
+    try:
+        with open(PROJEKT_SOUBOR, "r", encoding="utf-8") as f:
+            projekt = json.load(f)
+    except FileNotFoundError:
+        print(f"Chyba: Soubor {PROJEKT_SOUBOR} nebyl nalezen.")
+        return
+
+    globalni = projekt.get("globalni_promenne", {})
+    stranky = projekt.get("stranky", {})
+
+    # --- ZPRACOVÁNÍ TITULKY ---
+    titulka = stranky.get("00_titulka")
+    if titulka:
+        print("\nZpracovávám: 00_titulka (Titulní strana)")
+        prompt_titulka = titulka["prompt"].format(**globalni)
+        negativni = titulka.get("negativni", "").format(**globalni)
+
+        aktualni_sablona = sablona_text
+        aktualni_sablona = aktualni_sablona.replace("__HLAVNI_PROMPT__", prompt_titulka)
+        aktualni_sablona = aktualni_sablona.replace("__NEGATIVNI_PROMPT__", negativni)
+
+        # Šablona vyžaduje inpainting, pro titulku pošleme slepá data
+        aktualni_sablona = aktualni_sablona.replace("__EDITACNI_PROMPT__", "empty background")
+        aktualni_sablona = aktualni_sablona.replace("__TEXT_MASKY__", "none")
+
+        # Uložíme základ jako titulku, inpaintingový výsledek označíme jako odpad
+        aktualni_sablona = aktualni_sablona.replace('"base_"', '"00_titulka_"')
+        aktualni_sablona = aktualni_sablona.replace('"edited_"', '"00_odpad_"')
+
+        prompt_json = json.loads(aktualni_sablona)
+        prompt_id = odesli_do_comfy(prompt_json)
+        if prompt_id:
+            cekej_na_dokonceni(prompt_id)
+            stahni_obrazky(prompt_id)
+
+    # --- ZPRACOVÁNÍ MĚSÍCŮ ---
+    mesice = stranky.get("mesice", {})
+    for mesic_id, data_mesice in mesice.items():
+        poznamka = data_mesice.get('poznamka', '')
+        print(f"\nZpracovávám měsíc: {mesic_id} ({poznamka})")
+
+        prompt_A = data_mesice["prompt_A"].format(**globalni)
+        prompt_B = data_mesice["prompt_B"].format(**globalni)
+        negativni = data_mesice.get("negativni", "").format(**globalni)
+        text_masky = data_mesice["editacni_maska"].format(**globalni)
+
+        zaklad = data_mesice.get("zaklad", "A")
+
+        if zaklad == "A":
+            hlavni_prompt = prompt_A
+            editacni_prompt = prompt_B
+            prefix_zaklad = f"{mesic_id}A"
+            prefix_edit = f"{mesic_id}B"
+        else:
+            hlavni_prompt = prompt_B
+            editacni_prompt = prompt_A
+            prefix_zaklad = f"{mesic_id}B"
+            prefix_edit = f"{mesic_id}A"
+
+        aktualni_sablona = sablona_text
+        aktualni_sablona = aktualni_sablona.replace("__HLAVNI_PROMPT__", hlavni_prompt)
+        aktualni_sablona = aktualni_sablona.replace("__EDITACNI_PROMPT__", editacni_prompt)
+        aktualni_sablona = aktualni_sablona.replace("__TEXT_MASKY__", text_masky)
+        aktualni_sablona = aktualni_sablona.replace("__NEGATIVNI_PROMPT__", negativni)
+
+        aktualni_sablona = aktualni_sablona.replace('"base_"', f'"{prefix_zaklad}_"')
+        aktualni_sablona = aktualni_sablona.replace('"edited_"', f'"{prefix_edit}_"')
+
+        prompt_json = json.loads(aktualni_sablona)
+        prompt_id = odesli_do_comfy(prompt_json)
+        if prompt_id:
+            cekej_na_dokonceni(prompt_id)
+            stahni_obrazky(prompt_id)
+
+    print("\nCelý projekt byl úspěšně zpracován!")
+
+if __name__ == "__main__":
+    main()

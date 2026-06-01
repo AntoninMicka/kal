@@ -1,0 +1,37 @@
+Hlavní projektový checklist
+
+1. Stabilizace a oprava jádra
+
+    [x] Odladění základní logiky SVG šablon.
+
+    [x] Zajištění správného výpočtu a formátování kalendária.
+
+2. Produkční nástroje a AI logika (Aktuální fáze)
+
+    [x] Návrh struktury JSON projektových souborů pro hromadné zpracování.
+
+    [x] Sestavení inpainting grafu v ComfyUI s textovou detekcí masky.
+
+    [x] Python API skript pro řízení generování a automatické stahování výsledků.
+
+    [x] Rozšíření skriptu o podporu vrstvení, odřezávacích klapkek (Full) i zjednodušeného tisku (Economy).
+
+    [ ] Aktuální cíl: Ostrý test kompletní pipeline (spuštění přes projektový JSON, kontrola dávkově stažených obrázků a vygenerování finálního PDF).
+
+3. Rozšíření backendů a lokální výpočty
+
+    [ ] Sjednocení struktury výstupů napříč různými backendy (aby byla vygenerovaná videa a fotky jasně tříděna například podle aktéra, fronty nebo typu).
+
+    [ ] Napojení na lokální jazykové modely (např. pro automatizovanou iteraci a rozšiřování krátkých textových nápadů na komplexní prompty).
+
+4. Síťová infrastruktura a vzdálený přístup
+
+    [ ] Odladění síťové komunikace produkčního studia (např. řešení prostupů a přístupů mezi webovými UI v Docker kontejnerech a službami běžícími nativně přímo na hostitelském systému).
+
+    [ ] Zabezpečení a vzdálený přístup pro pohodlnou správu celého studia.
+
+5. Správa dat a verzování
+
+    [ ] Centralizace a automatizace správy Git repozitářů pomocí Bash skriptů.
+
+    [ ] Vytvoření workflow pro manipulaci s release větvemi a automatické logování či navyšování verzí v CMake.

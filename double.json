@@ -1,0 +1,240 @@
+{
+  "2": {
+    "inputs": {
+      "filename_prefix": "base_",
+      "images": [
+        "3",
+        0
+      ]
+    },
+    "class_type": "SaveImage",
+    "_meta": {
+      "title": "Save Image"
+    }
+  },
+  "3": {
+    "inputs": {
+      "samples": [
+        "4",
+        0
+      ],
+      "vae": [
+        "12",
+        2
+      ]
+    },
+    "class_type": "VAEDecode",
+    "_meta": {
+      "title": "VAE Decode"
+    }
+  },
+  "4": {
+    "inputs": {
+      "seed": 631093547827014,
+      "steps": 20,
+      "cfg": 8,
+      "sampler_name": "euler",
+      "scheduler": "simple",
+      "denoise": 1,
+      "model": [
+        "12",
+        0
+      ],
+      "positive": [
+        "5",
+        0
+      ],
+      "negative": [
+        "6",
+        0
+      ],
+      "latent_image": [
+        "11",
+        0
+      ]
+    },
+    "class_type": "KSampler",
+    "_meta": {
+      "title": "KSampler"
+    }
+  },
+  "5": {
+    "inputs": {
+      "text": "__HLAVNI_PROMPT__",
+      "clip": [
+        "12",
+        1
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (PromptBase)"
+    }
+  },
+  "6": {
+    "inputs": {
+      "text": "__NEGATIVNI_PROMPT__",
+      "clip": [
+        "12",
+        1
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (Prompt)"
+    }
+  },
+  "11": {
+    "inputs": {
+      "width": 1024,
+      "height": 1024,
+      "batch_size": 1
+    },
+    "class_type": "EmptyLatentImage",
+    "_meta": {
+      "title": "Empty Latent Image"
+    }
+  },
+  "12": {
+    "inputs": {
+      "ckpt_name": "cyberrealisticXL_v90.safetensors"
+    },
+    "class_type": "CheckpointLoaderSimple",
+    "_meta": {
+      "title": "Load Checkpoint"
+    }
+  },
+  "17": {
+    "inputs": {
+      "mask": [
+        "18",
+        0
+      ]
+    },
+    "class_type": "MaskToImage",
+    "_meta": {
+      "title": "Convert Mask to Image"
+    }
+  },
+  "18": {
+    "inputs": {
+      "text": "__TEXT_MASKY__",
+      "blur": 7,
+      "threshold": 0.15,
+      "dilation_factor": 5,
+      "image": [
+        "3",
+        0
+      ]
+    },
+    "class_type": "CLIPSeg",
+    "_meta": {
+      "title": "CLIPSeg"
+    }
+  },
+  "19": {
+    "inputs": {
+      "images": [
+        "17",
+        0
+      ]
+    },
+    "class_type": "PreviewImage",
+    "_meta": {
+      "title": "Preview Image"
+    }
+  },
+  "20": {
+    "inputs": {
+      "grow_mask_by": 5,
+      "pixels": [
+        "3",
+        0
+      ],
+      "vae": [
+        "12",
+        2
+      ],
+      "mask": [
+        "18",
+        0
+      ]
+    },
+    "class_type": "VAEEncodeForInpaint",
+    "_meta": {
+      "title": "VAE Encode (for Inpainting)"
+    }
+  },
+  "21": {
+    "inputs": {
+      "text": "__EDITACNI_PROMPT__",
+      "clip": [
+        "12",
+        1
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (PromptEdit)"
+    }
+  },
+  "22": {
+    "inputs": {
+      "seed": 508570314198973,
+      "steps": 20,
+      "cfg": 8,
+      "sampler_name": "euler",
+      "scheduler": "simple",
+      "denoise": 0.75,
+      "model": [
+        "12",
+        0
+      ],
+      "positive": [
+        "21",
+        0
+      ],
+      "negative": [
+        "6",
+        0
+      ],
+      "latent_image": [
+        "20",
+        0
+      ]
+    },
+    "class_type": "KSampler",
+    "_meta": {
+      "title": "KSampler"
+    }
+  },
+  "23": {
+    "inputs": {
+      "samples": [
+        "22",
+        0
+      ],
+      "vae": [
+        "12",
+        2
+      ]
+    },
+    "class_type": "VAEDecode",
+    "_meta": {
+      "title": "VAE Decode"
+    }
+  },
+  "25": {
+    "inputs": {
+      "filename_prefix": "edited_",
+      "images": [
+        "23",
+        0
+      ]
+    },
+    "class_type": "SaveImage",
+    "_meta": {
+      "title": "Save Image"
+    }
+  }
+}
