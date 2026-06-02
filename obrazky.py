@@ -74,6 +74,10 @@ def stahni_obrazky(prompt_id):
                             slozka = obrazek["subfolder"]
                             typ = obrazek["type"]
 
+                            # Přeskočit dočasné obrázky (např. náhledy masek z PreviewImage)
+                            if typ != "output":
+                                continue
+
                             # Sestavení URL pro stažení přes API
                             params = urllib.parse.urlencode({"filename": nazev, "subfolder": slozka, "type": typ})
                             download_url = f"{COMFY_URL}/view?{params}"
