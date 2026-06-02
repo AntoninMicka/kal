@@ -16,6 +16,11 @@ Hlavní projektový checklist
 
     [x] Rozšíření skriptu o podporu vrstvení, odřezávacích klapkek (Full) i zjednodušeného tisku (Economy).
 
+    [ ] Nainstalovat modely pro Qwen-Image-Edit editaci v ComfyUI:
+        - models/diffusion_models/qwen_image_edit_fp8_e4m3fn.safetensors
+        - models/text_encoders/qwen_2.5_vl_7b_fp8_scaled.safetensors
+        - models/vae/qwen_image_vae.safetensors
+
     [ ] Aktuální cíl: Ostrý test kompletní pipeline (spuštění přes projektový JSON, kontrola dávkově stažených obrázků a vygenerování finálního PDF).
 
 3. Rozšíření backendů a lokální výpočty
