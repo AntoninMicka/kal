@@ -11,42 +11,12 @@ import random
 
 # --- KONFIGURACE ---
 COMFY_URL = "http://127.0.0.1:8188"
-SABLONA_SOUBOR = "double.json"
 PROJEKT_SOUBOR = "projekt.json"
 
-UZLY = {
-    "hlavni_prompt": "5",
-    "negativni_prompt": "6",
-    "editacni_prompt": "21",
-    "editacni_negativni_prompt": "101",
-    "text_masky": "18",
-    "editacni_sampler": "22",
-    "editacni_latent": "20",
-    "ulozit_zaklad": "2",
-    "ulozit_edit": "25",
-}
-
-QWEN_MODELY = {
-    "unet_name": "qwen_image_edit_fp8_e4m3fn.safetensors",
-    "clip_name": "qwen_2.5_vl_7b_fp8_scaled.safetensors",
-    "vae_name": "qwen_image_vae.safetensors",
-}
-
-FLUX_MODELY = {
-    "unet_name": "flux1-fill-dev-fp8.safetensors",
-    "clip_l": "clip_l.safetensors",
-    "t5xxl": "t5xxl_fp8_e4m3fn.safetensors",
-    "vae_name": "ae.safetensors",
-}
-
-VYCHOZI_EDITACE = {
-    "denoise": 0.45,
-    "cfg": 6,
-    "steps": 20,
-    "maska_blur": 5,
-    "maska_threshold": 0.08,
-    "maska_dilation": 2,
-    "grow_mask_by": 2,
+SABLONY = {
+    "sdxl": "sdxl.json",
+    "flux": "flux.json",
+    "qwen": "qwen.json"
 }
 
 def odesli_do_comfy(prompt_data):
@@ -60,7 +30,7 @@ def odesli_do_comfy(prompt_data):
     except urllib.error.HTTPError as e:
         err_msg = e.read().decode('utf-8')
         print(f"\nChyba API ComfyUI ({e.code}): {err_msg}")
-        print("  -> Ujistěte se, že 'double.json' je uložen v 'API formátu' (Save API Format).")
+        print("  -> Ujistěte se, že Váš JSON graf je uložen v 'API formátu' (Save API Format).")
         return None
     except Exception as e:
         print(f"Chyba připojení ke ComfyUI: {e}")
@@ -138,225 +108,37 @@ def zeptej_se_na_prepsani(nazev, generovat_vse):
             print("  Ukončuji skript...")
             sys.exit(0)
 
-def nastav_vstup(prompt_json, node_id, vstup, hodnota):
-    """Nastaví hodnotu vstupu v ComfyUI API grafu a vypíše srozumitelnou chybu."""
+def bezpecne_nahradit(text, klic, hodnota):
+    """Bezpečně nahradí klíč v textu (s escapováním uvozovek pro vložení do JSONu)."""
+    escapovana = json.dumps(hodnota)[1:-1]
+    return text.replace(klic, escapovana)
+
+def nahrad_a_nacti(sablona_text, hlavni, negativni, edit, maska, prefix_base, prefix_edit):
+    """Univerzální funkce, která textově nahradí proměnné a zrandomizuje seedy ve výsledném JSONu."""
+    s = sablona_text
+    s = bezpecne_nahradit(s, "__HLAVNI_PROMPT__", hlavni)
+    s = bezpecne_nahradit(s, "__NEGATIVNI_PROMPT__", negativni)
+    s = bezpecne_nahradit(s, "__EDITACNI_PROMPT__", edit)
+    s = bezpecne_nahradit(s, "__TEXT_MASKY__", maska)
+    
+    # Jména souborů
+    s = s.replace('"base_"', f'"{prefix_base}"')
+    s = s.replace('"edited_"', f'"{prefix_edit}"')
+    
     try:
-        prompt_json[node_id]["inputs"][vstup] = hodnota
-    except KeyError:
-        raise KeyError(f"V šabloně chybí uzel {node_id} nebo jeho vstup '{vstup}'.")
-
-def nastav_volitelny_vstup(prompt_json, node_id, vstup, hodnota):
-    """Nastaví vstup jen tehdy, když v daném uzlu existuje."""
-    if node_id in prompt_json and vstup in prompt_json[node_id].get("inputs", {}):
-        prompt_json[node_id]["inputs"][vstup] = hodnota
-
-def ziskej_nastaveni_editace(data_mesice, globalni):
-    nastaveni = dict(VYCHOZI_EDITACE)
-    nastaveni.update(data_mesice.get("editace", {}))
-
-    for klic, hodnota in list(nastaveni.items()):
-        if isinstance(hodnota, str):
-            nastaveni[klic] = hodnota.format(**globalni)
-
-    return nastaveni
-
-def priprav_prompt(sablona_json, hlavni_prompt, editacni_prompt, text_masky, negativni, prefix_zaklad, prefix_edit, nastaveni_editace):
-    """Vrátí kopii ComfyUI workflow vyplněnou pro jeden dvoustupňový běh."""
-    prompt_json = copy.deepcopy(sablona_json)
-
-    nastav_vstup(prompt_json, UZLY["hlavni_prompt"], "text", hlavni_prompt)
-    nastav_vstup(prompt_json, UZLY["negativni_prompt"], "text", negativni)
-    nastav_vstup(prompt_json, UZLY["editacni_prompt"], "text", editacni_prompt)
-    nastav_vstup(prompt_json, UZLY["editacni_negativni_prompt"], "text", negativni)
-    nastav_vstup(prompt_json, UZLY["text_masky"], "text", text_masky)
-    nastav_vstup(prompt_json, UZLY["ulozit_zaklad"], "filename_prefix", prefix_zaklad)
-    nastav_vstup(prompt_json, UZLY["ulozit_edit"], "filename_prefix", prefix_edit)
-
-    nastav_volitelny_vstup(prompt_json, UZLY["editacni_sampler"], "denoise", nastaveni_editace["denoise"])
-    nastav_volitelny_vstup(prompt_json, UZLY["editacni_sampler"], "cfg", nastaveni_editace["cfg"])
-    nastav_volitelny_vstup(prompt_json, UZLY["editacni_sampler"], "steps", nastaveni_editace["steps"])
-    nastav_volitelny_vstup(prompt_json, UZLY["text_masky"], "blur", nastaveni_editace["maska_blur"])
-    nastav_volitelny_vstup(prompt_json, UZLY["text_masky"], "threshold", nastaveni_editace["maska_threshold"])
-    nastav_volitelny_vstup(prompt_json, UZLY["text_masky"], "dilation_factor", nastaveni_editace["maska_dilation"])
-    nastav_volitelny_vstup(prompt_json, UZLY["editacni_latent"], "grow_mask_by", nastaveni_editace["grow_mask_by"])
-
-    return prompt_json
-
-def priprav_prompt_qwen(sablona_json, hlavni_prompt, editacni_prompt, negativni, prefix_zaklad, prefix_edit):
-    """Vrátí hybridní workflow: SDXL základ z původní šablony a Qwen instrukční editace."""
-    prompt_json = copy.deepcopy(sablona_json)
-
-    nastav_vstup(prompt_json, UZLY["hlavni_prompt"], "text", hlavni_prompt)
-    nastav_vstup(prompt_json, UZLY["negativni_prompt"], "text", negativni)
-    nastav_vstup(prompt_json, UZLY["ulozit_zaklad"], "filename_prefix", prefix_zaklad)
-
-    prompt_json["1000"] = {
-        "inputs": {
-            "unet_name": QWEN_MODELY["unet_name"],
-            "weight_dtype": "default",
-        },
-        "class_type": "UNETLoader",
-        "_meta": {"title": "Qwen Edit Model"},
-    }
-    prompt_json["1001"] = {
-        "inputs": {
-            "clip_name": QWEN_MODELY["clip_name"],
-            "type": "qwen_image",
-            "device": "default",
-        },
-        "class_type": "CLIPLoader",
-        "_meta": {"title": "Qwen Edit CLIP"},
-    }
-    prompt_json["1002"] = {
-        "inputs": {
-            "vae_name": QWEN_MODELY["vae_name"],
-        },
-        "class_type": "VAELoader",
-        "_meta": {"title": "Qwen Edit VAE"},
-    }
-    prompt_json["1003"] = {
-        "inputs": {
-            "clip": ["1001", 0],
-            "prompt": editacni_prompt,
-            "vae": ["1002", 0],
-            "image": ["28", 0],
-        },
-        "class_type": "TextEncodeQwenImageEdit",
-        "_meta": {"title": "Qwen Edit Positive"},
-    }
-    prompt_json["1004"] = {
-        "inputs": {
-            "clip": ["1001", 0],
-            "prompt": "",
-            "vae": ["1002", 0],
-            "image": ["28", 0],
-        },
-        "class_type": "TextEncodeQwenImageEdit",
-        "_meta": {"title": "Qwen Edit Negative"},
-    }
-    prompt_json["1005"] = {
-        "inputs": {
-            "pixels": ["28", 0],
-            "vae": ["1002", 0],
-        },
-        "class_type": "VAEEncode",
-        "_meta": {"title": "Qwen Encode Base Image"},
-    }
-    prompt_json["1006"] = {
-        "inputs": {
-            "model": ["1000", 0],
-            "shift": 3,
-        },
-        "class_type": "ModelSamplingAuraFlow",
-        "_meta": {"title": "Qwen Model Sampling"},
-    }
-    prompt_json["1007"] = {
-        "inputs": {
-            "model": ["1006", 0],
-            "strength": 1,
-        },
-        "class_type": "CFGNorm",
-        "_meta": {"title": "Qwen CFG Norm"},
-    }
-    prompt_json["1008"] = {
-        "inputs": {
-            "seed": 344147753686358,
-            "steps": 20,
-            "cfg": 2.5,
-            "sampler_name": "euler",
-            "scheduler": "simple",
-            "denoise": 1,
-            "model": ["1007", 0],
-            "positive": ["1003", 0],
-            "negative": ["1004", 0],
-            "latent_image": ["1005", 0],
-        },
-        "class_type": "KSampler",
-        "_meta": {"title": "Qwen Edit Sampler"},
-    }
-    prompt_json["1009"] = {
-        "inputs": {
-            "samples": ["1008", 0],
-            "vae": ["1002", 0],
-        },
-        "class_type": "VAEDecode",
-        "_meta": {"title": "Qwen Decode Edit"},
-    }
-
-    nastav_vstup(prompt_json, UZLY["ulozit_edit"], "images", ["1009", 0])
-    nastav_vstup(prompt_json, UZLY["ulozit_edit"], "filename_prefix", prefix_edit)
-
-    if "19" in prompt_json:
-        del prompt_json["19"]
-
-    return prompt_json
-
-def priprav_prompt_flux(sablona_json, hlavni_prompt, editacni_prompt, text_masky, prefix_zaklad, prefix_edit):
-    """Vrátí hybridní workflow: SDXL základ a FLUX.1-Fill editace."""
-    prompt_json = copy.deepcopy(sablona_json)
-
-    nastav_vstup(prompt_json, UZLY["hlavni_prompt"], "text", hlavni_prompt)
-    nastav_vstup(prompt_json, UZLY["ulozit_zaklad"], "filename_prefix", prefix_zaklad)
-    nastav_vstup(prompt_json, UZLY["text_masky"], "text", text_masky)
-
-    # Dynamické přidání FLUX architektury
-    prompt_json["2000"] = {
-        "inputs": {"unet_name": FLUX_MODELY["unet_name"], "weight_dtype": "default"},
-        "class_type": "UNETLoader",
-    }
-    prompt_json["2001"] = {
-        "inputs": {
-            "clip_name1": FLUX_MODELY["t5xxl"],
-            "clip_name2": FLUX_MODELY["clip_l"],
-            "type": "flux"
-        },
-        "class_type": "DualCLIPLoader",
-    }
-    prompt_json["2002"] = {
-        "inputs": {"vae_name": FLUX_MODELY["vae_name"]},
-        "class_type": "VAELoader",
-    }
-    prompt_json["2003"] = {
-        "inputs": {"text": editacni_prompt, "clip": ["2001", 0]},
-        "class_type": "CLIPTextEncode",
-    }
-    prompt_json["2004"] = {
-        "inputs": {"text": "", "clip": ["2001", 0]}, # FLUX ignoruje negativní prompty
-        "class_type": "CLIPTextEncode",
-    }
-    prompt_json["2005"] = {
-        "inputs": {
-            "grow_mask_by": 8,
-            "pixels": ["28", 0], # Opravený SDXL základ z FaceDetaileru
-            "vae": ["2002", 0],
-            "mask": ["18", 0]
-        },
-        "class_type": "VAEEncodeForInpaint",
-    }
-    prompt_json["2006"] = {
-        "inputs": {
-            "seed": random.randint(1, 10**14),
-            "steps": 25,
-            "cfg": 1.0, # FLUX Dev vyžaduje CFG 1.0
-            "sampler_name": "euler",
-            "scheduler": "simple",
-            "denoise": 1.0,
-            "model": ["2000", 0],
-            "positive": ["2003", 0],
-            "negative": ["2004", 0],
-            "latent_image": ["2005", 0]
-        },
-        "class_type": "KSampler",
-    }
-    prompt_json["2007"] = {
-        "inputs": {"samples": ["2006", 0], "vae": ["2002", 0]},
-        "class_type": "VAEDecode",
-    }
-
-    nastav_vstup(prompt_json, UZLY["ulozit_edit"], "images", ["2007", 0])
-    nastav_vstup(prompt_json, UZLY["ulozit_edit"], "filename_prefix", prefix_edit)
-
-    return prompt_json
+        graf = json.loads(s)
+    except json.JSONDecodeError as e:
+        print(f"Chyba při parsování grafu po nahrazení: {e}")
+        sys.exit(1)
+        
+    # Dynamická randomizace seedů ve všech uzlech
+    for node_id, node_data in graf.items():
+        if "inputs" in node_data:
+            for key in ["seed", "noise_seed"]:
+                if key in node_data["inputs"]:
+                    node_data["inputs"][key] = random.randint(1, 10**14)
+                    
+    return graf
 
 def ziskej_dvoustupnove_prompty(data_mesice, globalni):
     """
@@ -378,22 +160,19 @@ def ziskej_dvoustupnove_prompty(data_mesice, globalni):
 def main():
     parser = argparse.ArgumentParser(description="Generátor obrázků pro kalendář v ComfyUI.")
     parser.add_argument("-m", "--mesic", type=int, choices=range(0, 13), help="Číslo měsíce ke generování (0 = titulka, 1-12 = měsíce). Pokud není zadáno, generuje se vše.", default=None)
-    parser.add_argument("--editacni-model", choices=["sdxl", "qwen", "flux"], default="sdxl", help="Model pro druhý stupeň editace měsíců")
+    parser.add_argument("--model", choices=["sdxl", "flux", "qwen"], default="sdxl", help="Zvolte, který nezávislý graf (JSON) se má použít")
     args = parser.parse_args()
 
     print("Načítám soubory...")
-    # 1. Načtení ComfyUI API šablony
+    
+    sablona_soubor = SABLONY[args.model]
     try:
-        with open(SABLONA_SOUBOR, "r", encoding="utf-8") as f:
-            sablona_json = json.load(f)
+        with open(sablona_soubor, "r", encoding="utf-8") as f:
+            sablona_text = f.read()
     except FileNotFoundError:
-        print(f"Chyba: Soubor {SABLONA_SOUBOR} nebyl nalezen.")
-        return
-    except json.JSONDecodeError as e:
-        print(f"Chyba: Soubor {SABLONA_SOUBOR} není platný JSON: {e}")
+        print(f"Chyba: Zvolený graf {sablona_soubor} nebyl nalezen. Ujistěte se, že existuje.")
         return
 
-    # 2. Načtení nastavení projektu
     try:
         with open(PROJEKT_SOUBOR, "r", encoding="utf-8") as f:
             projekt = json.load(f)
@@ -409,7 +188,7 @@ def main():
     # --- ZPRACOVÁNÍ TITULKY ---
     titulka = stranky.get("00_titulka")
     if titulka and (args.mesic is None or args.mesic == 0):
-        print("\nZpracovávám: 00_titulka (Titulní strana)")
+        print(f"\nZpracovávám: 00_titulka (Model: {args.model.upper()})")
 
         prepsat = True
         if existuji_obrazky("00_titulka_"):
@@ -421,17 +200,15 @@ def main():
             prompt_titulka = titulka["prompt"].format(**globalni)
             negativni = titulka.get("negativni", "").format(**globalni)
 
-            # Šablona vyžaduje inpainting, pro titulku pošleme slepá data
-            prompt_json = priprav_prompt(
-                sablona_json,
+            prompt_json = nahrad_a_nacti(
+                sablona_text,
                 prompt_titulka,
+                negativni,
                 "empty background",
                 "none",
-                negativni,
                 "00_titulka_",
-                "00_odpad_",
-                VYCHOZI_EDITACE,
             )
+                
             prompt_id = odesli_do_comfy(prompt_json)
             if prompt_id:
                 cekej_na_dokonceni(prompt_id)
@@ -445,7 +222,7 @@ def main():
             continue
 
         poznamka = data_mesice.get('poznamka', '')
-        print(f"\nZpracovávám měsíc: {mesic_id} ({poznamka})")
+        print(f"\nZpracovávám měsíc: {mesic_id} ({poznamka}) (Model: {args.model.upper()})")
 
         hlavni_prompt, editacni_prompt, pismeno_zaklad, pismeno_edit = ziskej_dvoustupnove_prompty(data_mesice, globalni)
         prefix_zaklad = f"{mesic_id}{pismeno_zaklad}_"
@@ -462,40 +239,17 @@ def main():
 
         negativni = data_mesice.get("negativni", "").format(**globalni)
         text_masky = data_mesice["editacni_maska"].format(**globalni)
-        nastaveni_editace = ziskej_nastaveni_editace(data_mesice, globalni)
 
-        if args.editacni_model == "qwen":
-            print("  Editační model: Qwen-Image-Edit")
-            prompt_json = priprav_prompt_qwen(
-                sablona_json,
-                hlavni_prompt,
-                editacni_prompt,
-                negativni,
-                prefix_zaklad,
-                prefix_edit,
-            )
-        elif args.editacni_model == "flux":
-            print("  Editační model: FLUX.1-Fill (vysoké nároky na VRAM)")
-            prompt_json = priprav_prompt_flux(
-                sablona_json,
-                hlavni_prompt,
-                editacni_prompt,
-                text_masky,
-                prefix_zaklad,
-                prefix_edit,
-            )
-        else:
-            print(f"  Editační model: SDXL inpaint, denoise={nastaveni_editace['denoise']}, maska='{text_masky}'")
-            prompt_json = priprav_prompt(
-                sablona_json,
-                hlavni_prompt,
-                editacni_prompt,
-                text_masky,
-                negativni,
-                prefix_zaklad,
-                prefix_edit,
-                nastaveni_editace,
-            )
+        prompt_json = nahrad_a_nacti(
+            sablona_text,
+            hlavni_prompt,
+            negativni,
+            editacni_prompt,
+            text_masky,
+            prefix_zaklad,
+            prefix_edit
+        )
+            
         prompt_id = odesli_do_comfy(prompt_json)
         if prompt_id:
             cekej_na_dokonceni(prompt_id)

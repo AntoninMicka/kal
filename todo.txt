@@ -1,7 +1,10 @@
 TODO - Seznam modelů ke stažení pro ComfyUI
 ===========================================
 
-=== FLUX.1-Fill (pro parametr: --editacni-model flux) ===
+=== FLUX (pro parametr: --zakladni-model flux / --editacni-model flux) ===
+[ ] flux1-dev-fp8.safetensors (pouze pokud chcete i základ v modelu FLUX)
+    -> Umístit do: ComfyUI/models/unet/
+
 [ ] flux1-fill-dev-fp8.safetensors
     -> Umístit do: ComfyUI/models/unet/
 
