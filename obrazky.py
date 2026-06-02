@@ -7,6 +7,7 @@ import urllib.error
 import time
 import urllib.parse
 import copy
+import random
 
 # --- KONFIGURACE ---
 COMFY_URL = "http://127.0.0.1:8188"
@@ -29,6 +30,13 @@ QWEN_MODELY = {
     "unet_name": "qwen_image_edit_fp8_e4m3fn.safetensors",
     "clip_name": "qwen_2.5_vl_7b_fp8_scaled.safetensors",
     "vae_name": "qwen_image_vae.safetensors",
+}
+
+FLUX_MODELY = {
+    "unet_name": "flux1-fill-dev-fp8.safetensors",
+    "clip_l": "clip_l.safetensors",
+    "t5xxl": "t5xxl_fp8_e4m3fn.safetensors",
+    "vae_name": "ae.safetensors",
 }
 
 VYCHOZI_EDITACE = {
@@ -283,6 +291,73 @@ def priprav_prompt_qwen(sablona_json, hlavni_prompt, editacni_prompt, negativni,
 
     return prompt_json
 
+def priprav_prompt_flux(sablona_json, hlavni_prompt, editacni_prompt, text_masky, prefix_zaklad, prefix_edit):
+    """Vrátí hybridní workflow: SDXL základ a FLUX.1-Fill editace."""
+    prompt_json = copy.deepcopy(sablona_json)
+
+    nastav_vstup(prompt_json, UZLY["hlavni_prompt"], "text", hlavni_prompt)
+    nastav_vstup(prompt_json, UZLY["ulozit_zaklad"], "filename_prefix", prefix_zaklad)
+    nastav_vstup(prompt_json, UZLY["text_masky"], "text", text_masky)
+
+    # Dynamické přidání FLUX architektury
+    prompt_json["2000"] = {
+        "inputs": {"unet_name": FLUX_MODELY["unet_name"], "weight_dtype": "default"},
+        "class_type": "UNETLoader",
+    }
+    prompt_json["2001"] = {
+        "inputs": {
+            "clip_name1": FLUX_MODELY["t5xxl"],
+            "clip_name2": FLUX_MODELY["clip_l"],
+            "type": "flux"
+        },
+        "class_type": "DualCLIPLoader",
+    }
+    prompt_json["2002"] = {
+        "inputs": {"vae_name": FLUX_MODELY["vae_name"]},
+        "class_type": "VAELoader",
+    }
+    prompt_json["2003"] = {
+        "inputs": {"text": editacni_prompt, "clip": ["2001", 0]},
+        "class_type": "CLIPTextEncode",
+    }
+    prompt_json["2004"] = {
+        "inputs": {"text": "", "clip": ["2001", 0]}, # FLUX ignoruje negativní prompty
+        "class_type": "CLIPTextEncode",
+    }
+    prompt_json["2005"] = {
+        "inputs": {
+            "grow_mask_by": 8,
+            "pixels": ["28", 0], # Opravený SDXL základ z FaceDetaileru
+            "vae": ["2002", 0],
+            "mask": ["18", 0]
+        },
+        "class_type": "VAEEncodeForInpaint",
+    }
+    prompt_json["2006"] = {
+        "inputs": {
+            "seed": random.randint(1, 10**14),
+            "steps": 25,
+            "cfg": 1.0, # FLUX Dev vyžaduje CFG 1.0
+            "sampler_name": "euler",
+            "scheduler": "simple",
+            "denoise": 1.0,
+            "model": ["2000", 0],
+            "positive": ["2003", 0],
+            "negative": ["2004", 0],
+            "latent_image": ["2005", 0]
+        },
+        "class_type": "KSampler",
+    }
+    prompt_json["2007"] = {
+        "inputs": {"samples": ["2006", 0], "vae": ["2002", 0]},
+        "class_type": "VAEDecode",
+    }
+
+    nastav_vstup(prompt_json, UZLY["ulozit_edit"], "images", ["2007", 0])
+    nastav_vstup(prompt_json, UZLY["ulozit_edit"], "filename_prefix", prefix_edit)
+
+    return prompt_json
+
 def ziskej_dvoustupnove_prompty(data_mesice, globalni):
     """
     Určí, který prompt je základ a který je editace.
@@ -303,7 +378,7 @@ def ziskej_dvoustupnove_prompty(data_mesice, globalni):
 def main():
     parser = argparse.ArgumentParser(description="Generátor obrázků pro kalendář v ComfyUI.")
     parser.add_argument("-m", "--mesic", type=int, choices=range(0, 13), help="Číslo měsíce ke generování (0 = titulka, 1-12 = měsíce). Pokud není zadáno, generuje se vše.", default=None)
-    parser.add_argument("--editacni-model", choices=["sdxl", "qwen"], default="sdxl", help="Model pro druhý stupeň editace měsíců")
+    parser.add_argument("--editacni-model", choices=["sdxl", "qwen", "flux"], default="sdxl", help="Model pro druhý stupeň editace měsíců")
     args = parser.parse_args()
 
     print("Načítám soubory...")
@@ -396,6 +471,16 @@ def main():
                 hlavni_prompt,
                 editacni_prompt,
                 negativni,
+                prefix_zaklad,
+                prefix_edit,
+            )
+        elif args.editacni_model == "flux":
+            print("  Editační model: FLUX.1-Fill (vysoké nároky na VRAM)")
+            prompt_json = priprav_prompt_flux(
+                sablona_json,
+                hlavni_prompt,
+                editacni_prompt,
+                text_masky,
                 prefix_zaklad,
                 prefix_edit,
             )
