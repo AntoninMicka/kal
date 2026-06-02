@@ -43,9 +43,8 @@ def main():
     flux["4"]["inputs"]["positive"] = ["3003", 0]
     flux["3"]["inputs"]["vae"] = ["3002", 0]
 
-    flux["2005"] = {"inputs": {"pixels": ["3", 0], "vae": ["3002", 0]}, "class_type": "VAEEncode"}
-    flux["2010"] = {"inputs": {"samples": ["2005", 0], "mask": ["18", 0]}, "class_type": "SetLatentNoiseMask"}
-    flux["2006"] = {"inputs": {"seed": 0, "steps": 25, "cfg": 1.0, "sampler_name": "euler", "scheduler": "simple", "denoise": 0.95, "model": ["3000", 0], "positive": ["2008", 0], "negative": ["101", 0], "latent_image": ["2010", 0]}, "class_type": "KSampler"}
+    flux["2005"] = {"inputs": {"grow_mask_by": 10, "pixels": ["3", 0], "vae": ["3002", 0], "mask": ["18", 0]}, "class_type": "VAEEncodeForInpaint"}
+    flux["2006"] = {"inputs": {"seed": 0, "steps": 25, "cfg": 1.0, "sampler_name": "euler", "scheduler": "simple", "denoise": 1.0, "model": ["3000", 0], "positive": ["2008", 0], "negative": ["101", 0], "latent_image": ["2005", 0]}, "class_type": "KSampler"}
     flux["2007"] = {"inputs": {"samples": ["2006", 0], "vae": ["3002", 0]}, "class_type": "VAEDecode"}
 
     flux["21"]["inputs"]["clip"] = ["3001", 0]

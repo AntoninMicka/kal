@@ -217,6 +217,7 @@
   },
   "2005": {
     "inputs": {
+      "grow_mask_by": 10,
       "pixels": [
         "3",
         0
@@ -224,22 +225,13 @@
       "vae": [
         "3002",
         0
-      ]
-    },
-    "class_type": "VAEEncode"
-  },
-  "2010": {
-    "inputs": {
-      "samples": [
-        "2005",
-        0
       ],
       "mask": [
         "18",
         0
       ]
     },
-    "class_type": "SetLatentNoiseMask"
+    "class_type": "VAEEncodeForInpaint"
   },
   "2006": {
     "inputs": {
@@ -248,7 +240,7 @@
       "cfg": 1.0,
       "sampler_name": "euler",
       "scheduler": "simple",
-      "denoise": 0.95,
+      "denoise": 1.0,
       "model": [
         "3000",
         0
@@ -262,7 +254,7 @@
         0
       ],
       "latent_image": [
-        "2010",
+        "2005",
         0
       ]
     },
