@@ -215,16 +215,8 @@
     },
     "class_type": "FluxGuidance"
   },
-  "2000": {
-    "inputs": {
-      "unet_name": "flux1-fill-dev-fp8.safetensors",
-      "weight_dtype": "default"
-    },
-    "class_type": "UNETLoader"
-  },
   "2005": {
     "inputs": {
-      "grow_mask_by": 8,
       "pixels": [
         "3",
         0
@@ -232,13 +224,22 @@
       "vae": [
         "3002",
         0
+      ]
+    },
+    "class_type": "VAEEncode"
+  },
+  "2010": {
+    "inputs": {
+      "samples": [
+        "2005",
+        0
       ],
       "mask": [
         "18",
         0
       ]
     },
-    "class_type": "VAEEncodeForInpaint"
+    "class_type": "SetLatentNoiseMask"
   },
   "2006": {
     "inputs": {
@@ -247,9 +248,9 @@
       "cfg": 1.0,
       "sampler_name": "euler",
       "scheduler": "simple",
-      "denoise": 1.0,
+      "denoise": 0.95,
       "model": [
-        "2000",
+        "3000",
         0
       ],
       "positive": [
@@ -261,7 +262,7 @@
         0
       ],
       "latent_image": [
-        "2005",
+        "2010",
         0
       ]
     },
