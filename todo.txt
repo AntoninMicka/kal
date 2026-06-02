@@ -8,13 +8,13 @@ TODO - Seznam modelů ke stažení pro ComfyUI
 [ ] flux1-fill-dev-fp8.safetensors
     -> Umístit do: ComfyUI/models/unet/
 
-[ ] t5xxl_fp8_e4m3fn.safetensors
+[x] t5xxl_fp8_e4m3fn.safetensors
     -> Umístit do: ComfyUI/models/clip/
 
-[ ] clip_l.safetensors
+[X] clip_l.safetensors
     -> Umístit do: ComfyUI/models/clip/
 
-[ ] ae.safetensors
+[X] ae.safetensors
     -> Umístit do: ComfyUI/models/vae/
 
 
