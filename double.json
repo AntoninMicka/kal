@@ -30,7 +30,7 @@
   },
   "4": {
     "inputs": {
-      "seed": 631093547827014,
+      "seed": 496713547730965,
       "steps": 20,
       "cfg": 8,
       "sampler_name": "euler",
@@ -180,7 +180,7 @@
   },
   "22": {
     "inputs": {
-      "seed": 508570314198973,
+      "seed": 922441460845664,
       "steps": 20,
       "cfg": 8,
       "sampler_name": "euler",
@@ -242,7 +242,7 @@
       "guide_size": 1024,
       "guide_size_for": true,
       "max_size": 1024,
-      "seed": 0,
+      "seed": 14593175905532,
       "steps": 20,
       "cfg": 8,
       "sampler_name": "euler",
@@ -315,7 +315,7 @@
       "guide_size": 1024,
       "guide_size_for": true,
       "max_size": 1024,
-      "seed": 0,
+      "seed": 117293782809178,
       "steps": 20,
       "cfg": 8,
       "sampler_name": "euler",
@@ -401,7 +401,7 @@
       "guide_size": 1024,
       "guide_size_for": true,
       "max_size": 1024,
-      "seed": 0,
+      "seed": 971804368200605,
       "steps": 20,
       "cfg": 8,
       "sampler_name": "euler",
@@ -465,7 +465,7 @@
       "guide_size": 1024,
       "guide_size_for": true,
       "max_size": 1024,
-      "seed": 0,
+      "seed": 60211521875380,
       "steps": 20,
       "cfg": 8,
       "sampler_name": "euler",
@@ -526,7 +526,7 @@
   },
   "100": {
     "inputs": {
-      "ckpt_name": "sdxl_inpainting.safetensors"
+      "ckpt_name": "cyberrealisticXL_v90.safetensors"
     },
     "class_type": "CheckpointLoaderSimple",
     "_meta": {
